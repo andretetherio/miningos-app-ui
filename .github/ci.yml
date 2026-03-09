@@ -179,22 +179,14 @@ jobs:
         id: coverage-summary
         if: always()
         run: |
-          echo "## 📊 Coverage" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
           MIN=80
           if [ -f coverage/coverage-final.json ]; then
             if [ "${{ steps.run-tests.outcome }}" = "success" ]; then
-              ICON="✅"; STATUS="PASS"
+              STATUS_CELL="✅ PASS"
             else
-              ICON="❌"; STATUS="FAIL (coverage below threshold in vitest.config.js)"
+              STATUS_CELL="❌ FAIL (coverage below threshold in vitest.config.js)"
             fi
-            {
-              echo "| | Value |"
-              echo "|--|-------|"
-              echo "| **Thresholds** | From \`vitest.config.js\` |"
-              echo "| **Status** | $ICON $STATUS |"
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo "coverage_result=$ICON Vitest (thresholds in vitest.config.js)" >> "$GITHUB_OUTPUT"
+            echo "coverage_result=$STATUS_CELL Vitest (thresholds in vitest.config.js)" >> "$GITHUB_OUTPUT"
           elif [ -f coverage/lcov.info ]; then
             set +e
             OUT=$(npx --yes lcov-total coverage/lcov.info --gte=$MIN 2>&1)
@@ -202,17 +194,9 @@ jobs:
             set -e
             PCT=$(echo "$OUT" | tail -1)
             [ $EXIT -eq 0 ] && ICON="✅" && STATUS="PASS" || ICON="❌" && STATUS="FAIL"
-            {
-              echo "| | Value |"
-              echo "|--|-------|"
-              echo "| **Minimum to pass** | ${MIN}% |"
-              echo "| **Current coverage** | ${PCT}% |"
-              echo "| **Status** | $ICON $STATUS |"
-            } >> "$GITHUB_STEP_SUMMARY"
             echo "coverage_result=$ICON Coverage ${PCT}% (min ${MIN}%)" >> "$GITHUB_OUTPUT"
             exit $EXIT
           else
-            echo "No coverage report (\`coverage/lcov.info\` or \`coverage/coverage-final.json\`)." >> "$GITHUB_STEP_SUMMARY"
             echo "coverage_result=⚠️ No coverage report" >> "$GITHUB_OUTPUT"
           fi
 
