@@ -180,20 +180,28 @@ jobs:
         if: always()
         run: |
           MIN=80
-          if [ -f coverage/coverage-final.json ]; then
-            if [ "${{ steps.run-tests.outcome }}" = "success" ]; then
-              STATUS_CELL="✅ PASS"
+          # Vitest: detect by config (handles its own thresholds); brittle uses Istanbul + nyc check.
+          if [ -f vitest.config.js ] || [ -f vitest.config.ts ]; then
+            if [ -f coverage/coverage-final.json ]; then
+              if [ "${{ steps.run-tests.outcome }}" = "success" ]; then
+                STATUS_CELL="✅ PASS"
+              else
+                STATUS_CELL="❌ FAIL (coverage below threshold in vitest.config.js)"
+              fi
+              echo "coverage_result=$STATUS_CELL Vitest (thresholds in vitest.config.js)" >> "$GITHUB_OUTPUT"
             else
-              STATUS_CELL="❌ FAIL (coverage below threshold in vitest.config.js)"
+              echo "coverage_result=⚠️ No coverage report" >> "$GITHUB_OUTPUT"
             fi
-            echo "coverage_result=$STATUS_CELL Vitest (thresholds in vitest.config.js)" >> "$GITHUB_OUTPUT"
-          elif [ -f coverage/lcov.info ]; then
+          elif [ -f coverage/coverage-final.json ]; then
+            mkdir -p .nyc_output
+            cp coverage/coverage-final.json .nyc_output/out.json
             set +e
-            OUT=$(npx --yes lcov-total coverage/lcov.info --gte=$MIN 2>&1)
+            npx --yes nyc check-coverage --lines=$MIN --statements=$MIN --functions=$MIN --branches=$MIN
             EXIT=$?
             set -e
-            PCT=$(echo "$OUT" | tail -1)
-            [ $EXIT -eq 0 ] && ICON="✅" && STATUS="PASS" || ICON="❌" && STATUS="FAIL"
+            PCT=$(npx --yes nyc report --reporter=text-summary 2>/dev/null | sed -n 's/^Lines[^:]*: *\([0-9.]*\)%.*/\1/p')
+            [ -z "$PCT" ] && PCT="—"
+            [ $EXIT -eq 0 ] && ICON="✅" || ICON="❌"
             echo "coverage_result=$ICON Coverage ${PCT}% (min ${MIN}%)" >> "$GITHUB_OUTPUT"
             exit $EXIT
           else
