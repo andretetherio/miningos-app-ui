@@ -183,7 +183,11 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           MIN=80
           if [ -f coverage/coverage-final.json ]; then
-            [ "${{ steps.run-tests.outcome }}" = "success" ] && ICON="✅" && STATUS="PASS" || ICON="❌" && STATUS="FAIL (coverage below threshold in vitest.config.js)"
+            if [ "${{ steps.run-tests.outcome }}" = "success" ]; then
+              ICON="✅"; STATUS="PASS"
+            else
+              ICON="❌"; STATUS="FAIL (coverage below threshold in vitest.config.js)"
+            fi
             {
               echo "| | Value |"
               echo "|--|-------|"
